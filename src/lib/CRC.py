@@ -3,9 +3,7 @@ This module contains the CRC class which is used to calculate the checksum of a
 segment using 16-bit CRC.
 '''
 
-import struct
-
-from src.lib.constants import CRC_INIT, CRC_XOROUT, CRC_POLY
+from constants import CRC_INIT, CRC_XOROUT, CRC_POLY
 
 class CRC:
     '''
@@ -17,7 +15,7 @@ class CRC:
 
     Methods:
         _calc_table: Calculates the table used to calculate the checksum.
-        _update_checksum: Updates the checksum of the segment.
+        update_checksum: Updates the checksum of the segment.
         get_checksum: Returns the checksum of the segment as bytes.
     '''
 
@@ -37,7 +35,7 @@ class CRC:
             crc = 0
             c = i << 8
             for j in range(8):
-                
+
                 # If the MSB is 1
                 if (crc ^ c) & 0x8000:
                     crc = (crc << 1) ^ CRC_POLY
@@ -50,7 +48,7 @@ class CRC:
             table.append(crc)
         return table
 
-    def _update_checksum(self, data):
+    def update_checksum(self, data):
         '''
         Updates the checksum of the segment.
 
@@ -68,4 +66,5 @@ class CRC:
         Returns:
             A bytes object representing the checksum of the segment.
         '''
-        return struct.pack('H', self._checksum ^ CRC_XOROUT)
+        return self._checksum ^ CRC_XOROUT
+    

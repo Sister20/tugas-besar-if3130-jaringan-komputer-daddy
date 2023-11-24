@@ -1,6 +1,6 @@
 import socket
 from Segment import Segment
-from constants import (
+from Constants import (
   SEGMENT_SIZE,
 )
 

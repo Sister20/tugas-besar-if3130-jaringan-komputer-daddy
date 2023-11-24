@@ -4,7 +4,7 @@ a data sent from the server to the client using the UDP protocol.
 '''
 
 import struct
-from constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
+from Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
 from CRC import CRC
 
 class SegmentFlag:
@@ -55,6 +55,7 @@ class Segment:
         _calc_checksum: Calculates the checksum of the segment.
         _verify_checksum: Verifies the checksum of the segment.
         get_bytes: Returns the byte representation of the segment.
+        set_from_bytes: Sets the segment from the byte representation.
     '''
 
     def __init__(self):
@@ -101,6 +102,16 @@ class Segment:
         flag_bytes = self.flag.get_flag_bytes()
         checksum_bytes = struct.pack("H", self.checksum)
         return header + flag_bytes + b"\x00" + checksum_bytes + self.payload
+    
+    def set_from_bytes(self, byte):
+        header = byte[:8]
+        flag = byte[8:9]
+        checksum = byte[10:12]
+        payload = byte[12:]
+        self.seq_num, self.ack_num = struct.unpack("II", header)
+        self.flag = SegmentFlag(flag[0])
+        self.checksum = struct.unpack("H", checksum)[0]
+        self.payload = payload
 
     def __str__(self):
         return f"seq: {self.seq_num}, ack: {self.ack_num}, flag: {self.get_flags()}, checksum: {self.checksum}, payload: {self.payload}"

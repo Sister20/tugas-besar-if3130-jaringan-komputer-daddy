@@ -4,8 +4,8 @@ a data sent from the server to the client using the UDP protocol.
 '''
 
 import struct
-from .constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
-from .CRC import CRC
+from Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
+from CRC import CRC
 
 class SegmentFlag:
     '''
@@ -104,12 +104,12 @@ class Segment:
         return header + flag_bytes + b"\x00" + checksum_bytes + self.payload
     
     def set_from_bytes(self, byte):
-        header = byte[:8]
         flag = byte[8:9]
         checksum = byte[10:12]
         payload = byte[12:]
-        self.seq_num, self.ack_num = struct.unpack("II", header)
-        self.flag = SegmentFlag(flag[0])
+        self.seq = struct.unpack("I", byte[0:4])[0]
+        self.ack = struct.unpack("I", byte[4:8])[0]
+        self.flag = SegmentFlag(struct.unpack("B", flag)[0])
         self.checksum = struct.unpack("H", checksum)[0]
         self.payload = payload
 
@@ -148,6 +148,15 @@ def main():
     # Verify the checksum
     checksum_verification = segment._verify_checksum()
     print("\nChecksum Verification:", checksum_verification)
+
+    segment1 = Segment()
+    segment1.set_from_bytes(segment_bytes)
+    print(segment1.get_flags())
+    # Create a Segment instance
+    segment = Segment()
+    segment_bytes = b'{\x00\x00\x00\xc8\x01\x00\x00\x03\x00JWHello, UDP!'
+    segment.set_from_bytes(segment_bytes)
+    print(segment.get_flags())
 
 if __name__ == "__main__":
     main()

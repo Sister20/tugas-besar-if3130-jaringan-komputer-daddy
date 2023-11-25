@@ -44,7 +44,6 @@ class Server():
     syk_ack_req.set_flags(["SYN", "ACK"])
 
     # Setting SYN-ACK header
-    print(f"TEST: {received_segment.get_header()}")
     header = received_segment.get_header()
     temp_header_seq = 0
     temp_header_ack = header["seq"] + 1

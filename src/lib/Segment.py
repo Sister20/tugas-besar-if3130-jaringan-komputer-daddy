@@ -21,16 +21,16 @@ class SegmentFlag:
         get_flag: Returns the flags as an integer.
     '''
     
-    def __init__(self, flag):
-        self.syn = bool(flag & SYN_FLAG)
-        self.ack = bool(flag & ACK_FLAG)
-        self.fin = bool(flag & FIN_FLAG)
+    def __init__(self, flag: bytes):
+        self.syn = flag & SYN_FLAG
+        self.ack = flag & ACK_FLAG
+        self.fin = flag & FIN_FLAG
 
-    def get_flag_bytes(self):
-        return struct.pack('B', int(self.syn) | (int(self.ack) << 1) | (int(self.fin) << 2))
+    def get_flag_bytes(self) -> bytes:
+        return struct.pack("B", self.syn | self.ack | self.fin)
 
-    def get_flag(self):
-        return int(self.syn) | (int(self.ack) << 1) | (int(self.fin) << 2)
+    def get_flag(self) -> int:
+        return self.syn | self.ack | self.fin
 
 class Segment:
     '''
@@ -151,14 +151,12 @@ def main():
 
     segment1 = Segment()
     segment1.set_from_bytes(segment_bytes)
-    segment1.set_flags(flag_list)
     print(segment1.get_flags())
 
     # Create a Segment instance
     segment = Segment()
-    segment_bytes = b'{\x00\x00\x00\xc8\x01\x00\x00\x03\x00JWHello, UDP!'
+    segment_bytes = b'{\x00\x00\x00\xc8\x01\x00\x00\x12\x00JWHello, UDP!'
     segment.set_from_bytes(segment_bytes)
-    segment.set_flags(flag_list)
     print(segment.get_flags())
 
 if __name__ == "__main__":

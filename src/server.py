@@ -32,6 +32,8 @@ class Server():
                     break
               else:
                  print(f"Already received client request from {client_address[0]}:{client_address[1]}")
+            else:
+              print("Invalid flag")
 
     except KeyboardInterrupt:
         print("Server is shutting down.")

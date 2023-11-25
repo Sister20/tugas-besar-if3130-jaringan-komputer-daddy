@@ -1,6 +1,6 @@
 import socket
-from Segment import Segment
-from Constants import (
+from .Segment import Segment
+from .constants import (
   SEGMENT_SIZE,
 )
 
@@ -59,9 +59,13 @@ class Connection:
   def send(self, data: Segment, dest: (str, int)):
     self.socket.sendto(data.get_bytes(), dest)
 
-  def listen(self) -> Segment:
+  def listen(self):
     byte, address = self.socket.recvfrom(SEGMENT_SIZE)
-    return byte, address
+    incoming_segment = Segment()
+    incoming_segment.set_from_bytes(byte)
+    incoming_segment.set_checksum()
+    verif = incoming_segment._verify_checksum()
+    return incoming_segment, address, verif
 
   def set_timeout(self, time):
     self.sock.settimeout(time)

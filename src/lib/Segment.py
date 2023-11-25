@@ -104,11 +104,11 @@ class Segment:
         return header + flag_bytes + b"\x00" + checksum_bytes + self.payload
     
     def set_from_bytes(self, byte):
+        header = byte[:8]
         flag = byte[8:9]
         checksum = byte[10:12]
         payload = byte[12:]
-        self.seq = struct.unpack("I", byte[0:4])[0]
-        self.ack = struct.unpack("I", byte[4:8])[0]
+        self.seq_num, self.ack_num = struct.unpack("II", header)
         self.flag = SegmentFlag(struct.unpack("B", flag)[0])
         self.checksum = struct.unpack("H", checksum)[0]
         self.payload = payload
@@ -151,11 +151,14 @@ def main():
 
     segment1 = Segment()
     segment1.set_from_bytes(segment_bytes)
+    segment1.set_flags(flag_list)
     print(segment1.get_flags())
+
     # Create a Segment instance
     segment = Segment()
     segment_bytes = b'{\x00\x00\x00\xc8\x01\x00\x00\x03\x00JWHello, UDP!'
     segment.set_from_bytes(segment_bytes)
+    segment.set_flags(flag_list)
     print(segment.get_flags())
 
 if __name__ == "__main__":

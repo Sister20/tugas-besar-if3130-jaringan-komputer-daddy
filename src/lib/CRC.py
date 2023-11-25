@@ -3,7 +3,7 @@ This module contains the CRC class which is used to calculate the checksum of a
 segment using 16-bit CRC.
 '''
 
-from Constants import CRC_INIT, CRC_XOROUT, CRC_POLY
+from .Constants import CRC_INIT, CRC_XOROUT, CRC_POLY
 
 class CRC:
     '''

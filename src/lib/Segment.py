@@ -4,8 +4,8 @@ a data sent from the server to the client using the UDP protocol.
 '''
 
 import struct
-from Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
-from CRC import CRC
+from .Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
+from .CRC import CRC
 
 class SegmentFlag:
     '''

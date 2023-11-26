@@ -1,6 +1,6 @@
 import socket
-from Segment import Segment
-from Constants import (
+from .Segment import Segment
+from .Constants import (
   SEGMENT_SIZE,
 )
 
@@ -44,7 +44,7 @@ class Connection:
 
     if(server):
       self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-      self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+      # self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
     else:
       self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)

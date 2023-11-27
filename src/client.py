@@ -1,4 +1,3 @@
-import time
 from lib.Connection import Connection
 from lib.Segment import Segment
 from lib.Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG

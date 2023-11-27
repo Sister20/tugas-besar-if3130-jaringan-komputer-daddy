@@ -3,14 +3,16 @@ from lib.Connection import Connection
 from lib.Segment import Segment
 from lib.Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
 from socket import timeout as socket_timeout
+from lib.Parser import Parser
 
 class Client():
   def __init__(self):
+    self.parser = Parser(server=False)
     self.ip = 'localhost'
-    self.server_port = 12345
-    self.client_port = 54321
+    self.server_port = self.parser.get_args()["broadcast_port"]
+    self.client_port = self.parser.get_args()["client_port"]
     self.connection = Connection('localhost', self.client_port, False)
-    self.filepath = "../out/daddy.mp3"
+    self.filepath = self.parser.get_args()["output_file"]
     self.file = self.create_file()
     
   def create_file(self):

@@ -3,15 +3,17 @@ from lib.Connection import Connection
 from lib.Segment import Segment
 from lib.Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG, SEGMENT_SIZE, PAYLOAD_SIZE, WINDOW_SIZE
 import os
+from lib.Parser import Parser
 
 class Server():
   def __init__(self):
+    self.parser = Parser(server=True)
     self.ip = 'localhost'
-    self.port = 12345
+    self.port = self.parser.get_args()["broadcast_port"]
     self.clients = []
     self.connection = Connection(self.ip, self.port, True)
 
-    self.filepath = "../test/lagu.mp3"
+    self.filepath = self.parser.get_args()["input_file"]
     self.file = self.get_file()
     print(self.file)
     self.filesize = os.path.getsize(self.filepath) if self.filepath else None

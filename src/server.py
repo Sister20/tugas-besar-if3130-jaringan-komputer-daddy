@@ -21,42 +21,43 @@ class Server():
     self.split_file_to_segment()
     
   def get_filename(self):
-      if "/" in self.filepath:
-          return self.filepath.split("/")[-1]
-
-      elif "\\" in self.filepath:
-          return self.filepath.split("\\")[-1]
-
-      return self.filepath
+      return os.path.basename(self.filepath)
   
   def split_file_to_segment(self):
-    self.segment_list = []
-    segment_length = ceil(self.filesize / PAYLOAD_SIZE)
-    
+    # Create metadata segment
     metadata_segment = Segment()
-    filename = self.filename.split(".")[0]
-    extension = self.filename.split(".")[-1]
+    filename, extension = os.path.splitext(self.filename)
     filesize = self.filesize
     filepath = self.filepath
-    
-    payload = filename.encode() + ",".encode() + extension.encode() + ",".encode() + str(filesize).encode() + ",".encode() + str(filepath).encode() + ",".encode() + str(segment_length).encode()
+    segment_length = ceil(filesize / PAYLOAD_SIZE)
+
+    # Set metadata payload
+    payload = f"{filename},{extension},{filesize},{filepath},{segment_length}".encode()
     metadata_segment.set_payload(payload)
-    header_seq_num_metadata = 2
-    header_ack_num_metadata = 2
-    metadata_segment.set_header(header_seq_num_metadata,header_ack_num_metadata)
-    self.segment_list.append(metadata_segment)
-    
-    
+
+    # Set metadata header
+    metadata_segment.set_header(seq_num=2, ack_num=2)
+
+    self.segment_list = [metadata_segment]
+
+    # Create segments for file partitions
     for i in range(segment_length):
-      segment_temp = Segment() #New segment for each partition
-      byte_offset = i * PAYLOAD_SIZE
-      self.file.seek(byte_offset) #Shift to byteoffset
-      payload_segment_temp = self.file.read(PAYLOAD_SIZE) #Get PAYLOAD_SIZE byte from file
-      segment_temp.set_payload(payload_segment_temp) #Set segment payload from byte partition above
-      header_seq_num = i + 3 #sequence number
-      header_ack_num = 3 # acknowledge number
-      segment_temp.set_header(header_seq_num,header_ack_num) #Set header for each segment (file patition)
-      self.segment_list.append(segment_temp) #append partition to list
+        # Create a new segment for each partition
+        segment_temp = Segment()
+
+        # Set payload from file partition
+        byte_offset = i * PAYLOAD_SIZE
+        self.file.seek(byte_offset)
+        payload_segment_temp = self.file.read(PAYLOAD_SIZE)
+        segment_temp.set_payload(payload_segment_temp)
+
+        # Set header for each segment (file partition)
+        header_seq_num = i + 3
+        header_ack_num = 3
+        segment_temp.set_header(seq_num=header_seq_num, ack_num=header_ack_num)
+
+        # Append partition to the list
+        self.segment_list.append(segment_temp)
       
   def file_transfer(self,client_address):
     # Sequence number 2 for Metadata Segment (Metadata)
@@ -76,14 +77,7 @@ class Server():
           received_segment, response_address, verif = self.connection.listen(2) #Get response (segment) from client
           
           if(not verif): #checksum failed
-            exit(1)
-          
-          # print(response_address[1])
-          # print(client_address[1])
-          # print(received_segment.get_flags())
-          # print(ACK_FLAG)
-          # print(sequence_base+1)
-          # print(f'Received ACK {received_segment.get_header()["ack"]} from [{client_address[0]} : {client_address[1]}]')
+            raise Exception("Checksum failed")
           
           if(client_address[1] == response_address[1]) and (received_segment.get_flags() == ACK_FLAG) and (received_segment.get_header()["ack"] == sequence_base + 1):
             print(f"[!] Received ACK {sequence_base + 1} from [Client {client_address[0]}:{client_address[1]}]")
@@ -101,30 +95,33 @@ class Server():
               sequence_base = Rn
         except:
           print(f"[!] [Timeout] Problem ACK response, resending segment to [Client {client_address[0]}:{client_address[1]}]")
-    else : 
-      print(f"[!] File transfer complete, sending FIN to [Client {client_address[0]}:{client_address[1]}]")
-      segmentFIN = Segment()
-      segmentFIN.set_flags(["FIN"]) #Request FIN ACK to client
-      self.connection.send(segmentFIN,client_address)
-      
-      while True:
-        try:
-          received_segment,response_address,valid = self.connection.listen()
-          
-          if client_address[1] == response_address[1] and received_segment.get_flags() == (FIN_FLAG + ACK_FLAG):
-            print(f"[!] Recieved FIN-ACK [Client {client_address[0]}:{client_address[1]}]")
-            sequence_base += 1
-            break
 
-        except:
-          print(f"[!] [Timeout] Problem ACK response, resending FIN to [Client {client_address[0]}:{client_address[1]}]")
-          self.connection.send(segmentFIN, client_address)
-      
-      # Send ACK Flag to Client
-      print(f"[!] Sending ACK Flag to [Client {client_address[0]}:{client_address[1]}]")
-      segmentACK = Segment()
-      segmentACK.set_flags(["ACK"])
-      self.connection.send(segmentACK, client_address)
+    print(f"[!] File transfer complete, sending FIN to [Client {client_address[0]}:{client_address[1]}]")
+    segmentFIN = Segment()
+    segmentFIN.set_flags(["FIN"]) #Request FIN ACK to client
+    self.connection.send(segmentFIN,client_address)
+    
+    while True:
+      try:
+        received_segment, response_address, valid = self.connection.listen()
+        
+        if not valid:
+          raise Exception("Checksum failed")
+
+        if client_address[1] == response_address[1] and received_segment.get_flags() == (FIN_FLAG + ACK_FLAG):
+          print(f"[!] Received FIN-ACK [Client {client_address[0]}:{client_address[1]}]")
+          sequence_base += 1
+          break
+
+      except:
+        print(f"[!] [Timeout] Problem ACK response, resending FIN to [Client {client_address[0]}:{client_address[1]}]")
+        self.connection.send(segmentFIN, client_address)
+    
+    # Send ACK Flag to Client
+    print(f"[!] Sending ACK Flag to [Client {client_address[0]}:{client_address[1]}]")
+    segmentACK = Segment()
+    segmentACK.set_flags(["ACK"])
+    self.connection.send(segmentACK, client_address)
         
   def listen_clients(self):
     try:
@@ -157,7 +154,7 @@ class Server():
               else:
                  print(f"Already received client request from {client_address[0]}:{client_address[1]}")
             else:
-              print("Invalid flag")
+              print("Invalid flag or checksum failed.")
 
     except KeyboardInterrupt:
         print("Server is shutting down.")
@@ -182,11 +179,11 @@ class Server():
     print(received_segment)
     print()
     if not verif:
-      print("Checksum Failed. Abort Handshake")
+      print("Checksum Failed. Abort Handshake.")
       exit(1)
     
     if(received_segment.get_flags() == ACK_FLAG):
-      print("Handshake successfull")
+      print("Handshake successful")
 
   def start(self):
     for i in self.clients:
@@ -204,6 +201,7 @@ class Server():
     except FileNotFoundError:
       print(f"{self.filepath} doesn't exists. Exiting...")
       exit(1)
+
 if __name__ == "__main__":
    main = Server()
    main.listen_clients()

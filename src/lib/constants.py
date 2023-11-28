@@ -13,4 +13,4 @@ CRC_POLY = 0x1021
 # Connection constants
 SEGMENT_SIZE = 32768
 
-WINDOW_SIZE = 4
+WINDOW_SIZE = 3

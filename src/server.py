@@ -1,7 +1,7 @@
 from math import ceil
 from lib.Connection import Connection
 from lib.Segment import Segment
-from lib.Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG, SEGMENT_SIZE, PAYLOAD_SIZE, WINDOW_SIZE
+from lib.constants import SYN_FLAG, ACK_FLAG, FIN_FLAG, SEGMENT_SIZE, PAYLOAD_SIZE, WINDOW_SIZE
 import os
 from lib.Parser import Parser
 
@@ -31,6 +31,7 @@ class Server():
   
   def split_file_to_segment(self):
     self.segment_list = []
+    segment_length = ceil(self.filesize / PAYLOAD_SIZE)
     
     metadata_segment = Segment()
     filename = self.filename.split(".")[0]
@@ -38,14 +39,13 @@ class Server():
     filesize = self.filesize
     filepath = self.filepath
     
-    payload = filename.encode() + ",".encode() + extension.encode() + ",".encode() + str(filesize).encode() + ",".encode() + str(filepath).encode()
+    payload = filename.encode() + ",".encode() + extension.encode() + ",".encode() + str(filesize).encode() + ",".encode() + str(filepath).encode() + ",".encode() + str(segment_length).encode()
     metadata_segment.set_payload(payload)
     header_seq_num_metadata = 2
     header_ack_num_metadata = 2
     metadata_segment.set_header(header_seq_num_metadata,header_ack_num_metadata)
     self.segment_list.append(metadata_segment)
     
-    segment_length = ceil(self.filesize / PAYLOAD_SIZE)
     
     for i in range(segment_length):
       segment_temp = Segment() #New segment for each partition
@@ -73,7 +73,7 @@ class Server():
       
       for i in range(sequence_max):
         try:
-          received_segment, response_address, verif = self.connection.listen() #Get response (segment) from client
+          received_segment, response_address, verif = self.connection.listen(2) #Get response (segment) from client
           
           if(not verif): #checksum failed
             exit(1)

@@ -1,6 +1,6 @@
 from lib.Connection import Connection
 from lib.Segment import Segment
-from lib.constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
+from lib.Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
 from socket import timeout as socket_timeout
 from lib.Parser import Parser
 
@@ -84,7 +84,7 @@ class Client():
           if(verif and received_segment.get_header()["seq"] == metadata_segment_number and metadata_segment_received == False):
             payload = received_segment.get_payload()
             metadata_segment = payload.decode().split(",")
-            print(f"[!] Received Filename: {metadata_segment[0]}, File Extension: {metadata_segment[1]}, File Size: {metadata_segment[2]}, Filepath: {metadata_segment[3]}, Total Segment: {metadata_segment[4]} from [Server {server_address[0]}:{server_address[1]}]")
+            print(f"[!] Received Filename: {metadata_segment[0]}, File Extension: {metadata_segment[1]}, File Size: {metadata_segment[2]}, Filepath: {metadata_segment[3]} from [Server {server_address[0]}:{server_address[1]}]")
             metadata_segment_received = True
             self.sendACK(server_address, metadata_segment_number)
             continue
@@ -108,6 +108,7 @@ class Client():
             print(f"[!] Received Segment {received_segment.get_header()['seq']} from [Server {server_address[0]}:{server_address[1]}] [Duplicate Segment]")
           elif received_segment.get_header()["seq"] > Rn:
             print(f"[!] Received Segment {received_segment.get_header()['seq']} from [Server {server_address[0]}:{server_address[1]}] [Segment Out-Of-Order]")
+            # self.sendACK(server_address, Rn)
           else:
             print(f"[!] Received Segment {received_segment.get_header()['seq']} from [Server {server_address[0]}:{server_address[1]}]  [File Error]")
         else:

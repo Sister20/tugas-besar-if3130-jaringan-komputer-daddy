@@ -59,13 +59,17 @@ class Connection:
   def send(self, data: Segment, dest: (str, int)):
     self.socket.sendto(data.get_bytes(), dest)
 
-  def listen(self):
-    byte, address = self.socket.recvfrom(SEGMENT_SIZE)
-    incoming_segment = Segment()
-    incoming_segment.set_from_bytes(byte)
-    incoming_segment.set_checksum()
-    verif = incoming_segment._verify_checksum()
-    return incoming_segment, address, verif
+  def listen(self, timeout=5):
+    try:
+      self.set_timeout(timeout)
+      byte, address = self.socket.recvfrom(SEGMENT_SIZE)
+      incoming_segment = Segment()
+      incoming_segment.set_from_bytes(byte)
+      incoming_segment.set_checksum()
+      verif = incoming_segment._verify_checksum()
+      return incoming_segment, address, verif
+    except TimeoutError as e:
+      raise e
 
   def set_timeout(self, time):
     self.sock.settimeout(time)

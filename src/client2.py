@@ -1,6 +1,6 @@
 from lib.Connection import Connection
 from lib.Segment import Segment
-from lib.Constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
+from lib.constants import SYN_FLAG, ACK_FLAG, FIN_FLAG
 from socket import timeout as socket_timeout
 from lib.Parser import Parser
 

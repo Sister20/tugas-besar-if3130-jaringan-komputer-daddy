@@ -1,9 +1,10 @@
 from math import ceil
 from lib.Connection import Connection
 from lib.Segment import Segment
-from lib.constants import SYN_FLAG, ACK_FLAG, FIN_FLAG, SEGMENT_SIZE, PAYLOAD_SIZE, WINDOW_SIZE
+from lib.constants import SYN_FLAG, ACK_FLAG, FIN_FLAG, PAYLOAD_SIZE, WINDOW_SIZE
 import os
 from lib.Parser import Parser
+from concurrent.futures import ThreadPoolExecutor
 
 class Server():
   def __init__(self):
@@ -200,9 +201,18 @@ class Server():
         print("Handshake successful")
 
   def start(self):
-    for i in self.clients:
-      self.three_way_handshake(i[1], i[0])
-      self.file_transfer(i[0])
+    # Run in parallel
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        handshake_futures = [executor.submit(self.three_way_handshake, client[1], client[0]) for client in self.clients]
+        transfer_futures = [executor.submit(self.file_transfer, client[0]) for client in self.clients]
+
+        # Wait for all handshake tasks to complete
+        for future in handshake_futures:
+            future.result()
+
+        # Wait for all file transfer tasks to complete
+        for future in transfer_futures:
+            future.result()
       
   def shutdown(self):
     self.file.close()

@@ -152,7 +152,8 @@ class Server():
                       break
                     else : 
                       print("Input Not Valid! \n")
-                  break
+                  if(more_input == "n"):
+                    break
               else:
                  print(f"Already received client request from {client_address[0]}:{client_address[1]}")
             else:

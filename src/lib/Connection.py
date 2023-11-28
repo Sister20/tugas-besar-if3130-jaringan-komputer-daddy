@@ -59,9 +59,10 @@ class Connection:
   def send(self, data: Segment, dest: (str, int)):
     self.socket.sendto(data.get_bytes(), dest)
 
-  def listen(self, timeout=10):
+  def listen(self, timeout=10, bool=False):
     try:
-      self.set_timeout(timeout)
+      if(not bool):
+        self.set_timeout(timeout)
       byte, address = self.socket.recvfrom(SEGMENT_SIZE)
       incoming_segment = Segment()
       incoming_segment.set_from_bytes(byte)

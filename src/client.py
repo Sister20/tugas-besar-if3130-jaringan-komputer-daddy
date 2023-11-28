@@ -31,7 +31,7 @@ class Client():
     self.connection.send(segment, (self.ip, self.server_port))
     try:
       while True:
-        received_segment, client_address, verif = self.connection.listen()
+        received_segment, client_address, verif = self.connection.listen(10,True)
 
         if not verif:
           print("Checksum Failed. Abort Handshake")

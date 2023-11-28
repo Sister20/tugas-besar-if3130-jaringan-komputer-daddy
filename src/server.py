@@ -59,70 +59,82 @@ class Server():
         # Append partition to the list
         self.segment_list.append(segment_temp)
       
-  def file_transfer(self,client_address):
-    # Sequence number 2 for Metadata Segment (Metadata)
-    segment_length = len(self.segment_list) + 2 #+2 for handshake
-    window_size = min(segment_length - 2, WINDOW_SIZE) #Select how many times to send packet before asking ACK Flag from client
-    sequence_base = 2 #Sequence Number
+  def file_transfer(self, client_address):
+    segment_length = len(self.segment_list) + 2  # +2 for handshake
+    window_size = min(segment_length - 2, WINDOW_SIZE)
+    sequence_base = 2
 
     while sequence_base < segment_length:
-      sequence_max=window_size #Sn for sending segment before asking ACK
-      for i in range(sequence_max):
-        print(f"[!] Sending segment {sequence_base + i} to [Client {client_address[0]}:{client_address[1]}]")
-        if i + sequence_base < segment_length:
-            self.connection.send(self.segment_list[i + sequence_base - 2], client_address)
-      
-      for i in range(sequence_max):
-        try:
-          received_segment, response_address, verif = self.connection.listen(2) #Get response (segment) from client
-          
-          if(not verif): #checksum failed
-            raise Exception("Checksum failed")
-          
-          if(client_address[1] == response_address[1]) and (received_segment.get_flags() == ACK_FLAG) and (received_segment.get_header()["ack"] == sequence_base + 1):
-            print(f"[!] Received ACK {sequence_base + 1} from [Client {client_address[0]}:{client_address[1]}]")
-            sequence_base += 1
-            window_size = min(segment_length - sequence_base, WINDOW_SIZE)
-          elif client_address[1] != response_address[1]:
-            print(f"[!] Received ACK from wrong client [Client {client_address[0]}:{client_address[1]}]")
-          elif received_segment.get_flags() != ACK_FLAG:
-            print(f"[!] Recieved Wrong Flag from [Client {client_address[0]}:{client_address[1]}]")
-          else : 
-            print(f"[!] Received Wrong ACK from [Client {client_address[0]}:{client_address[1]}]")
-            Rn = received_segment.get_header()["ack"]
-            if (Rn > sequence_base):
-              sequence_max = sequence_max - sequence_base + Rn
-              sequence_base = Rn
-        except:
-          print(f"[!] [Timeout] Problem ACK response, resending segment to [Client {client_address[0]}:{client_address[1]}]")
+        sequence_max = window_size
 
+        # Send segments
+        for i in range(sequence_max):
+            current_sequence = i + sequence_base
+            if current_sequence < segment_length:
+                segment_to_send = self.segment_list[current_sequence - 2]
+                print(f"[!] Sending segment {current_sequence} to [Client {client_address[0]}:{client_address[1]}]")
+                self.connection.send(segment_to_send, client_address)
+
+        # Receive acknowledgments
+        for i in range(sequence_max):
+            try:
+                received_segment, response_address, verif = self.connection.listen(2)
+
+                if not verif:
+                    raise Exception("Checksum failed")
+
+                if (
+                    client_address[1] == response_address[1]
+                    and received_segment.get_flags() == ACK_FLAG
+                    and received_segment.get_header()["ack"] == sequence_base + 1
+                ):
+                    print(f"[!] Received ACK {sequence_base + 1} from [Client {client_address[0]}:{client_address[1]}]")
+                    sequence_base += 1
+                    window_size = min(segment_length - sequence_base, WINDOW_SIZE)
+                elif client_address[1] != response_address[1]:
+                    print(f"[!] Received ACK from wrong client [Client {client_address[0]}:{client_address[1]}]")
+                elif received_segment.get_flags() != ACK_FLAG:
+                    print(f"[!] Received Wrong Flag from [Client {client_address[0]}:{client_address[1]}]")
+                else:
+                    print(f"[!] Received Wrong ACK from [Client {client_address[0]}:{client_address[1]}]")
+                    Rn = received_segment.get_header()["ack"]
+                    if Rn > sequence_base:
+                        sequence_max = sequence_max - sequence_base + Rn
+                        sequence_base = Rn
+            except Exception as e:
+                print(f"[!] [Error] {str(e)} while handling ACK response, resending segment to [Client {client_address[0]}:{client_address[1]}]")
+
+    # Transfer complete, send FIN
     print(f"[!] File transfer complete, sending FIN to [Client {client_address[0]}:{client_address[1]}]")
     segmentFIN = Segment()
-    segmentFIN.set_flags(["FIN"]) #Request FIN ACK to client
-    self.connection.send(segmentFIN,client_address)
-    
+    segmentFIN.set_flags(["FIN"])
+    self.connection.send(segmentFIN, client_address)
+
+    # Wait for FIN-ACK
     while True:
-      try:
-        received_segment, response_address, valid = self.connection.listen()
-        
-        if not valid:
-          raise Exception("Checksum failed")
+        try:
+            received_segment, response_address, valid = self.connection.listen()
 
-        if client_address[1] == response_address[1] and received_segment.get_flags() == (FIN_FLAG + ACK_FLAG):
-          print(f"[!] Received FIN-ACK [Client {client_address[0]}:{client_address[1]}]")
-          sequence_base += 1
-          break
+            if not valid:
+                raise Exception("Checksum failed")
 
-      except:
-        print(f"[!] [Timeout] Problem ACK response, resending FIN to [Client {client_address[0]}:{client_address[1]}]")
-        self.connection.send(segmentFIN, client_address)
-    
-    # Send ACK Flag to Client
+            if (
+                client_address[1] == response_address[1]
+                and received_segment.get_flags() == (FIN_FLAG + ACK_FLAG)
+            ):
+                print(f"[!] Received FIN-ACK [Client {client_address[0]}:{client_address[1]}]")
+                sequence_base += 1
+                break
+        except Exception as e:
+            print(f"[!] [Error] {str(e)} while handling ACK response, resending FIN to [Client {client_address[0]}:{client_address[1]}]")
+            self.connection.send(segmentFIN, client_address)
+
+    # Send ACK to complete the transfer
     print(f"[!] Sending ACK Flag to [Client {client_address[0]}:{client_address[1]}]")
     segmentACK = Segment()
     segmentACK.set_flags(["ACK"])
     self.connection.send(segmentACK, client_address)
-        
+
   def listen_clients(self):
     try:
         while True:

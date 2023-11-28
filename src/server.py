@@ -139,63 +139,65 @@ class Server():
     try:
         while True:
             print("Waiting for client...")
-            # Listen for incoming segments
             received_segment, client_address, verif = self.connection.listen()
+
             if verif and received_segment.get_flags() == SYN_FLAG:
-              print(f"Received SYN from {client_address} : ")
-              print(received_segment)
-              print()
-
-              if client_address not in self.clients:
-                  # Add listened client address to a list
-                  self.clients.append((client_address, received_segment))
-                  print(f"Received request from {client_address[0]}:{client_address[1]}")
-
-                  while True :
-                    more_input = input("Listen more clients? (y/n) : ").lower()
-                    print()
-
-                    if(more_input == "n"):
-                      break
-                    elif(more_input == "y"):
-                      break
-                    else : 
-                      print("Input Not Valid! \n")
-                  if(more_input == "n"):
-                    break
-              else:
-                 print(f"Already received client request from {client_address[0]}:{client_address[1]}")
+                try:
+                  self.handle_client_request(received_segment, client_address)
+                except StopIteration:
+                  break
             else:
-              print("Invalid flag or checksum failed.")
+                print("Invalid flag or checksum failed.")
 
     except KeyboardInterrupt:
         print("Server is shutting down.")
 
-  def three_way_handshake(self, received_segment: Segment, client_address): 
-    # Server handshake, sending SYN-ACK to client
-    syk_ack_req = Segment()
-    syk_ack_req.set_flags(["SYN", "ACK"])
+  def handle_client_request(self, received_segment, client_address):
+    print(f"Received SYN from {client_address} : ")
+    print(received_segment)
+    print()
 
-    # Setting SYN-ACK header
+    if client_address not in self.clients:
+        self.clients.append((client_address, received_segment))
+        print(f"Received request from {client_address[0]}:{client_address[1]}")
+
+        while True:
+            more_input = input("Listen more clients? (y/n) : ").lower()
+            print()
+
+            if more_input in {"n", "y"}:
+                break
+            else:
+                print("Input Not Valid! \n")
+
+        if more_input == "n":
+            raise StopIteration  # Terminate the loop
+    else:
+        print(f"Already received client request from {client_address[0]}:{client_address[1]}")
+
+  def three_way_handshake(self, received_segment: Segment, client_address):
+    syn_ack_req = Segment()
+    syn_ack_req.set_flags(["SYN", "ACK"])
+
     header = received_segment.get_header()
     temp_header_seq = 0
     temp_header_ack = header["seq"] + 1
 
-    syk_ack_req.set_header(temp_header_seq, temp_header_ack)
+    syn_ack_req.set_header(temp_header_seq, temp_header_ack)
 
-    self.connection.send(syk_ack_req, client_address)
+    self.connection.send(syn_ack_req, client_address)
 
-    # Server handshake, receiving ACK from client
     received_segment, client_address, verif = self.connection.listen()
     print(f"Received ACK from {client_address} : ")
     print(received_segment)
     print()
+
     if not verif:
-      print("Checksum Failed. Abort Handshake.")
-      exit(1)
-    
-    if(received_segment.get_flags() == ACK_FLAG):
-      print("Handshake successful")
+        print("Checksum Failed. Abort Handshake.")
+        exit(1)
+
+    if received_segment.get_flags() == ACK_FLAG:
+        print("Handshake successful")
 
   def start(self):
     for i in self.clients:
